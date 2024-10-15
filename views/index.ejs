@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+  <link rel="stylesheet" href="/stylesheets/style.css" />
+  <title>Photo Editor</title>
+</head>
+
+<body class="bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 flex flex-col min-h-screen">
+
+  <div id="main" class="flex flex-col md:flex-row md:space-x-4 p-4 md:p-8 mx-auto max-w-6xl rounded-lg ">
+    <!-- Left Section -->
+    <div id="left" class="flex flex-col flex-1 mb-4 md:mb-0 p-4 bg-white rounded-lg shadow-md h-[50vh] md:h-auto">
+      <div id="imagediv" class="flex flex-col items-center bg-white shadow-lg rounded-lg w-full max-w-md mx-auto">
+        <img src="/images/uploads/<%= filename %>" alt="Uploaded Image" class="w-full h-auto rounded-lg object-cover max-h-60 md:max-h-80">
+        <div id="undo_redo" class="flex space-x-2 mt-1 pt-2 pb-2">
+          <button id="undo" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300">Undo</button>
+          <button id="redo" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300">Redo</button>
+        </div>
+      </div>
+      <form id="photoform" action="/photo" method="post" enctype="multipart/form-data" class="flex flex-col items-center mt-4">
+        <input id="fileinput" type="file" name="avatar" class="hidden" />
+        <label for="fileinput" class="px-4 py-2 bg-green-600 text-white rounded-lg cursor-pointer hover:bg-green-700 transition duration-300">Upload Photo</label>
+      </form>
+    </div>
+
+    <!-- Right Section -->
+    <div id="right" class="flex flex-col flex-1 space-y-4 overflow-auto w-full mt-4 md:mt-0">
+      <div id="options" class="bg-white shadow-lg rounded-lg p-4 space-y-4 overflow-auto">
+        <h2 class="text-xl font-semibold mb-2 text-gray-800">Edit Options</h2>
+        <button class="w-full px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition duration-300" id="invert">Invert</button>
+        <button class="w-full px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition duration-300" id="gray">Grayscale</button>
+        <button class="w-full px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition duration-300" id="mirror">Mirror</button>
+        <button class="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition duration-300" id="cover">Square Image</button>
+        <button class="w-full px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition duration-300" id="rotate">Rotate Image</button>
+        <button class="w-full px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition duration-300" id="fish">Fisheye</button>
+        <a id="download_link" href="/images/uploads/test.jpeg" download="download" class="block mt-4">
+          <button id="download" class="w-full px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition duration-300">Download</button>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.27.2/axios.min.js" integrity="sha512-odNmoc1XJy5x1TMVMdC7EMs3IVdItLPlCeL5vSUPN2llYKMJ2eByTTAIiiuqLg+GdNr9hF6z81p27DArRFKT7A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script>
+    var current_filename = '0_0';
+    var current_version = current_filename.split('_')[0];
+    var max_version = current_filename.split('_')[0];
+    var version_history = ['0'];
+    var redo_counter = 0;
+    var redo_path = [];
+    var undo_redo_counter;
+
+    document.querySelector('#imagediv img').addEventListener('click', function() {
+      document.querySelector("#fileinput").click();
+    });
+    document.querySelector('#fileinput').addEventListener('change', function() {
+      document.querySelector('#photoform').submit();
+    });
+
+    document.querySelector('#invert').addEventListener('click', function() {
+      axios.get('/invert').then(fthen);
+    });
+    document.querySelector('#gray').addEventListener('click', function() {
+      axios.get('/gray').then(fthen);
+    });
+    document.querySelector('#mirror').addEventListener('click', function() {
+      axios.get('/mirror').then(fthen);
+    });
+    document.querySelector('#cover').addEventListener('click', function() {
+      axios.get('/cover').then(fthen);
+    });
+    document.querySelector('#rotate').addEventListener('click', function() {
+      axios.get('/rotate').then(fthen);
+    });
+    document.querySelector('#fish').addEventListener('click', function() {
+      axios.get('/fish').then(fthen);
+    });
+
+    function fthen(data) {
+      current_filename = data.data.img;
+      current_version = current_filename.split('_')[0];
+      max_version = current_filename.split('_')[0];
+      version_history.push(current_version);
+      undo_redo_counter = version_history.length - 1;
+
+      document.querySelector('#imagediv img').src = `/images/uploads/${data.data.img}`;
+      document.querySelector('#download_link').href = `/images/uploads/${data.data.img}`;
+    }
+
+    document.querySelector("#undo").addEventListener('click', function() {
+      if (version_history[undo_redo_counter] != 0) {
+        undo_redo_counter--;
+        version_history.push(version_history[undo_redo_counter]);
+        redo_path = [...version_history];
+        redo_counter = redo_path.length - 1;
+
+        document.querySelector('#imagediv img').src = `/images/uploads/${version_history[undo_redo_counter]}_${current_filename.split('_')[1]}`;
+        document.querySelector('#download_link').href = `/images/uploads/${version_history[undo_redo_counter]}_${current_filename.split('_')[1]}`;
+        axios.get(`/version/${version_history[undo_redo_counter]}`);
+      }
+    });
+
+    document.querySelector("#redo").addEventListener('click', function() {
+      if (1 <= redo_counter) {
+        redo_counter--;
+        undo_redo_counter++;
+        version_history.push(redo_path[redo_counter]);
+
+        document.querySelector('#imagediv img').src = `/images/uploads/${redo_path[redo_counter]}_${current_filename.split('_')[1]}`;
+        document.querySelector('#download_link').href = `/images/uploads/${redo_path[redo_counter]}_${current_filename.split('_')[1]}`;
+        axios.get(`/version/${version_history[undo_redo_counter]}`);
+      }
+    });
+  </script>
+</body>
+
+</html>
